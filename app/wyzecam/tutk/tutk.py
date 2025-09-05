@@ -54,6 +54,12 @@ Represents the size of the video stream sent back from the server; 2K
 or 2560x1440 pixels.
 """
 
+FRAME_SIZE_4K = 5
+"""
+Represents the size of the video stream sent back from the server; 4K (3840x2160).
+"""
+
+
 FRAME_SIZE_1080P = 0
 """
 Represents the size of the video stream sent back from the server; 1080P

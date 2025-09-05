@@ -94,9 +94,21 @@ class WyzeStream(Stream):
             logger.error(f"❗ {self.camera.nickname} may not support multiple streams!")
             self.state = StreamStatus.DISABLED
 
-        hq_size = 4 if self.camera.is_floodlight else 3 if self.camera.is_2k else 0
+        # 5 = 4K, 4 = floodlight special, 3 = 2K/QHD, 0 = 1080p
+        hq_size = (
+            5 if getattr(self.camera, "is_4k", False)
+            else 4 if self.camera.is_floodlight
+            else 3 if self.camera.is_2k
+            else 0
+        )
+
+        # Override default quality of hd180 for 4K cams
+        if getattr(self.camera, "is_4k", False) and not self.options.quality:
+            self.options.quality = "hd350"
 
         self.options.update_quality(hq_size)
+
+
         publish_discovery(self.uri, self.camera)
 
     @property

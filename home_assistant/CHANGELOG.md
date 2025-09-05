@@ -1,5 +1,9 @@
 # What's Changed
 
+## What's Changed in v3.12.4
+
+Added support for Cam Pan v4
+
 ## What's Changed in v3.12.3
 
 Cleaned up the threading logic around startup/shutdown to reduce CPU and memory leaks

@@ -15,6 +15,7 @@ MODEL_NAMES = {
     "WYZECP1_JEF": "Pan",
     "HL_PAN2": "Pan V2",
     "HL_PAN3": "Pan V3",
+    "HL_PAN4": "Pan V4",
     "HL_PANP": "Pan Pro",
     "HL_CFL2": "Floodlight V2",
     "WYZEDB3": "Doorbell",
@@ -46,11 +47,16 @@ NO_WEBRTC = {
 # known 2k cameras
 PRO_CAMS = {"HL_CAM3P", "HL_PANP", "HL_CAM4", "HL_DB2", "HL_CFL2"}
 
+#known 4k cameras
+FOURK_CAMS = set() #added for future compatability
+
 PAN_CAMS = {"WYZECP1_JEF", "HL_PAN2", "HL_PAN3", "HL_PANP"}
+#known 4k pan cameras
+PAN_FOURK_CAMS = {"HL_PAN4"}
 
 BATTERY_CAMS = {"WVOD1", "HL_WCO2", "AN_RSCW"}
 
-AUDIO_16k = {"WYZE_CAKP2JFUS", "HL_CAM3P", "MODEL_HL_PANP"}
+AUDIO_16k = {"WYZE_CAKP2JFUS", "HL_CAM3P", "HL_PANP"}
 # Doorbells
 DOORBELL = {"WYZEDB3", "HL_DB2", "GW_DBD"}
 
@@ -166,6 +172,11 @@ class WyzeCamera(BaseModel):
     @property
     def is_floodlight(self) -> bool:
         return self.product_model in FLOODLIGHT_CAMS
+    
+    @property
+    def is_4k(self) -> bool:
+        return (self.product_model in FOURK_CAMS
+            or self.product_model in PAN_FOURK_CAMS)
 
     @property
     def default_sample_rate(self) -> int:
@@ -185,7 +196,8 @@ class WyzeCamera(BaseModel):
 
     @property
     def is_pan_cam(self) -> bool:
-        return self.product_model in PAN_CAMS
+        return (self.product_model in PAN_CAMS
+            or self.product_model in PAN_FOURK_CAMS)
 
     @property
     def can_substream(self) -> bool:

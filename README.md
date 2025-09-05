@@ -55,6 +55,10 @@ You can then use the web interface at `http://localhost:5050` where `localhost` 
 
 See [basic usage](#basic-usage) for additional information or visit the [wiki page](https://github.com/idisposable/docker-wyze-bridge/wiki/Home-Assistant) for additional information on using the bridge as a Home Assistant Add-on.
 
+## What's Changed in v3.12.4
+
+Added support for Cam Pan v4
+
 ## What's Changed in v3.12.3
 
 Cleaned up the threading logic around startup/shutdown to reduce CPU and memory leaks
@@ -433,6 +437,7 @@ The container can be run on its own, in [Portainer](https://github.com/mrlt8/doc
 | Wyze Cam Pan                  | WYZECP1_JEF    | ✅                                                            | 4.10.9.x  |
 | Wyze Cam Pan v2               | HL_PAN2        | ✅                                                            | 4.49.11.x |
 | Wyze Cam Pan v3               | HL_PAN3        | ✅                                                            | 4.50.4.x  |
+| Wyze Cam Pan v4               | HL_PAN4        | ✅                                                            | 4.70.0.x  |
 | Wyze Cam Pan Pro [2K]         | HL_PANP        | ✅                                                            | -         |
 | Wyze Cam Outdoor              | WVOD1          | ✅                                                            | 4.17.4.x  |
 | Wyze Cam Outdoor v2           | HL_WCO2        | ✅                                                            | 4.48.4.x  |

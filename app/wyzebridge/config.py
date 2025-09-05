@@ -60,7 +60,7 @@ URI_SEPARATOR: str = env_bool("URI_SEPARATOR", "-", style="original")
 
 MTX_READTIMEOUT: str = env_bool("MTX_READTIMEOUT", "30s", style="original")
 MTX_HLSVARIANT: str = env_bool("MTX_HLSVARIANT", "mpegts", style="original")
-MTX_WRITEQUEUESIZE: int = env_bool("MTX_WRITEQUEUESIZE", "2048", style="int")
+MTX_WRITEQUEUESIZE: int = env_bool("MTX_WRITEQUEUESIZE", "4096", style="int")
 
 STUN_SERVER: str = env_bool("STUN_SERVER", "", style="original")
 
