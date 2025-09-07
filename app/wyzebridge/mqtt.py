@@ -316,6 +316,17 @@ def get_entities(base_topic: str, pan_cam: bool = False, rtsp: bool = False) -> 
                 "entity_category": "diagnostic",
             },
         },
+        "spotlight": {
+            "type": "switch",
+            "payload": {
+                "state_topic": f"{base_topic}whitelight",  
+                "command_topic": f"{base_topic}spotlight/set", 
+                "payload_on": 1,
+                "payload_off": 2,
+                "icon": "mdi:spotlight-beam",
+                "entity_category": "config",
+            },
+        },
         "motion_tagging": {
             "type": "switch",
             "payload": {

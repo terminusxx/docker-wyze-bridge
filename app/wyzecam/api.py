@@ -40,7 +40,7 @@ SC_SV = {
     },
 }
 APP_KEY = {"9319141212m2ik": "wyze_app_secret_key_132"}
-WYZE_APP_API_KEY = "WMXHYf79Nr5gIlt3r0r7p9Tcw5bvs6BB4U8O8nGJ"
+WYZE_APP_API_KEY = "WMXHYf79Nr5gIlt3r0r7p9Tcw5bvs6BB4U8O8nGJ" #someone should probably remove their API Key from the repo
 
 class AccessTokenError(Exception):
     pass
