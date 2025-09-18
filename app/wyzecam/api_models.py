@@ -50,10 +50,16 @@ PRO_CAMS = {"HL_CAM3P", "HL_PANP", "HL_CAM4", "HL_DB2", "HL_CFL2"}
 #known 4k cameras
 FOURK_CAMS = set() #added for future compatability
 
-PAN_CAMS = {"WYZECP1_JEF", "HL_PAN2", "HL_PAN3", "HL_PANP"}
+PAN_CAMS = {"WYZECP1_JEF", "HL_PAN2", "HL_PAN3", "HL_PANP","WL_DUO"}
 #known 4k pan cameras
-PAN_FOURK_CAMS = {"HL_PAN4"}
-
+PAN_FOURK_CAMS = {"HL_PAN4","WL_DUO"}
+#dual stream output for cam duo
+DUAL_STREAM_MODELS = {
+    "WL_DUO": [
+        {"name": "ptz",   "channel": 0, "ptz": True},
+        {"name": "fixed", "channel": 1, "ptz": False},
+    ]
+}
 BATTERY_CAMS = {"WVOD1", "HL_WCO2", "AN_RSCW"}
 
 AUDIO_16k = {"WYZE_CAKP2JFUS", "HL_CAM3P", "HL_PANP"}
