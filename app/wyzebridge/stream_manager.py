@@ -1,9 +1,10 @@
 import contextlib
 import json
 import time
+from copy import deepcopy  # <-- added
 from subprocess import Popen, TimeoutExpired
 from threading import Thread
-from typing import  Callable, Optional
+from typing import Callable, Optional
 
 from wyzebridge.wyze_api import WyzeApi
 from wyzebridge.stream import Stream
@@ -14,6 +15,67 @@ from wyzebridge.mqtt import bridge_status, cam_control, publish_topic, update_pr
 from wyzebridge.mtx_event import RtspEvent
 from wyzebridge.wyze_events import WyzeEvents
 from wyzebridge.bridge_utils_sunset import should_take_snapshot, should_skip_snapshot
+
+
+# -------- DUO helper (module-level) -----------------------------------------
+def _duo_variants(stream: Stream) -> list[Stream]:
+    """
+    If the incoming Stream is a Duo model, return two cloned streams:
+      - channel 0 (PTZ)  -> uri suffix '-ptz'
+      - channel 1 (Wide) -> uri suffix '-wide'
+    Otherwise, return [stream] unchanged.
+    """
+    # Try to read model from stream.cam.product_model (preferred),
+    # fall back to stream.product_model if present.
+    cam = getattr(stream, "cam", None)
+    product_model = (
+        getattr(cam, "product_model", None)
+        or getattr(stream, "product_model", None)
+        or ""
+    )
+
+    # Support both names we’ve seen used in the wild
+    if product_model not in {"WL_DUO", "GW_DUO"}:
+        return [stream]
+
+    def _mk_variant(src: Stream, channel: int, suffix: str, title_suffix: str) -> Stream:
+        s = deepcopy(src)
+
+        # channel flag (used by lower layers to pick the second feed)
+        try:
+            setattr(s, "channel", channel)
+        except Exception:
+            pass
+
+        # make a unique, stable uri
+        base_uri = getattr(src, "uri", None) or getattr(src, "name_uri", None)
+        if not base_uri:
+            base_uri = f"{getattr(cam, 'name_uri', 'cam')}"
+        s.uri = f"{base_uri}-{suffix}"
+
+        # pretty name if UI uses it
+        # prefer s.cam.nickname if available
+        nick = None
+        try:
+            if hasattr(s, "cam") and getattr(s.cam, "nickname", None):
+                nick = s.cam.nickname
+        except Exception:
+            pass
+        nick = nick or getattr(src, "uri", "Camera")
+        if hasattr(s, "display_name"):
+            s.display_name = f"{nick} {title_suffix}"
+        elif hasattr(s, "name"):
+            s.name = f"{nick} {title_suffix}"
+        # don’t touch s.cam.nickname (keep the physical device name)
+
+        return s
+
+    ptz = _mk_variant(stream, 0, "ptz", "(PTZ)")
+    wide = _mk_variant(stream, 1, "wide", "(Wide)")
+    logger.info(f"[STREAM] Expanding DUO model into two streams: {ptz.uri}, {wide.uri}")
+    return [ptz, wide]
+# ---------------------------------------------------------------------------
+
 
 class StreamManager:
     __slots__ = "api", "stop_flag", "streams", "rtsp_snapshots", "last_snap", "monitor_snapshots_thread"
@@ -35,9 +97,18 @@ class StreamManager:
         return len([s for s in self.streams.values() if s.enabled])
 
     def add(self, stream: Stream) -> str:
-        uri = stream.uri
-        self.streams[uri] = stream
-        return uri
+        """
+        Register a Stream. If the camera is a DUO, this will register
+        two logical streams (PTZ and Wide) and return the PTZ uri.
+        """
+        variants = _duo_variants(stream)
+        first_uri = None
+        for v in variants:
+            uri = v.uri
+            if first_uri is None:
+                first_uri = uri
+            self.streams[uri] = v
+        return first_uri or stream.uri
 
     def get(self, uri: str) -> Optional[Stream]:
         return self.streams.get(uri)
@@ -60,7 +131,7 @@ class StreamManager:
             with contextlib.suppress(ValueError, AttributeError, RuntimeError):
                 self.monitor_snapshots_thread.join(timeout=5)
             self.monitor_snapshots_thread = None
-                
+
         wait_for_purges()
 
     def monitor_streams(self, mtx_health: Callable) -> None:
@@ -117,11 +188,11 @@ class StreamManager:
             with contextlib.suppress(ValueError, AttributeError, RuntimeError):
                 self.monitor_snapshots_thread.join(timeout=5)
             self.monitor_snapshots_thread = None
-                
+
         self.monitor_snapshots_thread = Thread(target=wrapped, name="monitor_snapshots")
-        self.monitor_snapshots_thread.daemon = True # allow this thread to be abandoned
+        self.monitor_snapshots_thread.daemon = True  # allow this thread to be abandoned
         self.monitor_snapshots_thread.start()
-        
+
     def remove_from_rtsp_snapshots(self, cam: str):
         try:
             del self.rtsp_snapshots[cam]
