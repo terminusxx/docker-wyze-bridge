@@ -17,6 +17,7 @@ MODEL_NAMES = {
     "HL_PAN3": "Pan V3",
     "HL_PAN4": "Pan V4",
     "HL_PANP": "Pan Pro",
+    "GW_DUO": "Pan Duo",
     "HL_CFL2": "Floodlight V2",
     "WYZEDB3": "Doorbell",
     "HL_DB2": "Doorbell V2",
@@ -50,12 +51,12 @@ PRO_CAMS = {"HL_CAM3P", "HL_PANP", "HL_CAM4", "HL_DB2", "HL_CFL2"}
 #known 4k cameras
 FOURK_CAMS = set() #added for future compatability
 
-PAN_CAMS = {"WYZECP1_JEF", "HL_PAN2", "HL_PAN3", "HL_PANP","WL_DUO"}
+PAN_CAMS = {"WYZECP1_JEF", "HL_PAN2", "HL_PAN3", "HL_PANP","GW_DUO"}
 #known 4k pan cameras
-PAN_FOURK_CAMS = {"HL_PAN4","WL_DUO"}
+PAN_FOURK_CAMS = {"HL_PAN4","GW_DUO"}
 #dual stream output for cam duo
 DUAL_STREAM_MODELS = {
-    "WL_DUO": [
+    "GW_DUO": [
         {"name": "ptz",   "channel": 0, "ptz": True},
         {"name": "fixed", "channel": 1, "ptz": False},
     ]
@@ -66,7 +67,7 @@ AUDIO_16k = {"WYZE_CAKP2JFUS", "HL_CAM3P", "HL_PANP"}
 # Doorbells
 DOORBELL = {"WYZEDB3", "HL_DB2", "GW_DBD"}
 
-FLOODLIGHT_CAMS = {"HL_CFL2"}
+FLOODLIGHT_CAMS = {"HL_CFL2","GW_DUO"}
 
 VERTICAL_CAMS = {"WYZEDB3", "GW_BE1", "AN_RDB1"}
 # Minimum known firmware version that supports multiple streams
