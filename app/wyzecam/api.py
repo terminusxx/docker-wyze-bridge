@@ -225,14 +225,17 @@ def get_homepage_object_list(auth_info: WyzeCredential) -> dict[str, Any]:
 
 def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
     """Return a list of all cameras on the account, with debug logging."""
+    logger.warning("[API] 🔧 Patched get_camera_list is running (GW_DUO patch v1)")  # <--- marker
+
     data = get_homepage_object_list(auth_info)
     result: list[WyzeCamera] = []
 
     device_list = data.get("device_list", [])
     logger.info("[API] device_list count: %s", len(device_list))
 
-    # Debug: log every device, even if it's not a camera
+    # Debug: log every device the API returns
     for d in device_list:
+        dp = (d.get("device_params") or {})
         try:
             logger.info(
                 "[API] device: type=%s model=%s nick=%s mac=%s has_p2p=%s ip=%s",
@@ -240,8 +243,8 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
                 d.get("product_model"),
                 d.get("nickname"),
                 d.get("mac"),
-                bool((d.get("device_params") or {}).get("p2p_type")),
-                (d.get("device_params") or {}).get("ip"),
+                bool(dp.get("p2p_type")),
+                dp.get("ip"),
             )
         except Exception:
             pass
@@ -250,17 +253,22 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         logger.warning("[API] Unexpected device_list type: %s", type(device_list).__name__)
         return result
 
+    DUO_MODELS = {"WL_DUO", "GW_DUO"}
+
     for device in device_list:
-        if device.get("product_type") != "Camera":
+        product_type = device.get("product_type")
+        product_model: Optional[str] = device.get("product_model")
+
+        # Accept normal Cameras OR Duo models explicitly
+        if not (product_type == "Camera" or (product_model and product_model in DUO_MODELS)):
             continue
 
         device_params = device.get("device_params", {}) or {}
         p2p_id: Optional[str] = device_params.get("p2p_id")
         p2p_type: Optional[int] = device_params.get("p2p_type")
-        ip: Optional[str] = device_params.get("ip")  # MAY BE MISSING – that's OK
+        ip: Optional[str] = device_params.get("ip")  # may be missing
         enr: Optional[str] = device.get("enr")
         mac: Optional[str] = device.get("mac")
-        product_model: Optional[str] = device.get("product_model")
         nickname: Optional[str] = device.get("nickname")
         timezone_name: Optional[str] = device.get("timezone_name")
         firmware_ver: Optional[str] = device.get("firmware_ver")
