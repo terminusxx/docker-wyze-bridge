@@ -14,7 +14,6 @@ from wyzebridge.build_config import APP_VERSION, IOS_VERSION, VERSION
 from wyzecam.api_models import WyzeAccount, WyzeCamera, WyzeCredential
 from wyzebridge.logging import logger
 from typing import Optional
-from wyzebridge.wyze_api import post_device
 from wyzecam.api_models import WyzeCredential, WyzeCamera
 
 SCALE_USER_AGENT = f"Wyze/{APP_VERSION} (iPhone; iOS {IOS_VERSION}; Scale/3.00)"
