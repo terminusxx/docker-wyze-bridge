@@ -226,12 +226,19 @@ def get_homepage_object_list(auth_info: WyzeCredential) -> dict[str, Any]:
 def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
     """Return a list of all cameras on the account."""
     data = get_homepage_object_list(auth_info)
-    result = []
-    for device in data["device_list"]:
-        if device["product_type"] != "Camera":
+    result: list[WyzeCamera] = []
+
+    device_list = data.get("device_list", [])
+    if not isinstance(device_list, list):
+        logger.warning("[API] Unexpected device_list type: %s", type(device_list).__name__)
+        return result
+
+    for device in device_list:
+        if device.get("product_type") != "Camera":
             continue
 
-        device_params = device.get("device_params", {})
+        device_params = device.get("device_params", {}) or {}
+
         p2p_id: Optional[str] = device_params.get("p2p_id")
         p2p_type: Optional[int] = device_params.get("p2p_type")
         ip: Optional[str] = device_params.get("ip")
@@ -245,40 +252,57 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         parent_dtls: Optional[int] = device_params.get("main_device_dtls")
         parent_enr: Optional[str] = device.get("parent_device_enr")
         parent_mac: Optional[str] = device.get("parent_device_mac")
-        thumbnail: Optional[str] = device_params.get("camera_thumbnails").get(
-            "thumbnails_url"
-        )
 
+        # null-safe thumbnail lookup
+        thumbs = device_params.get("camera_thumbnails") or {}
+        thumbnail: Optional[str] = thumbs.get("thumbnails_url")
+
+        # Required fields with explicit skip logs
+        label = nickname or mac or product_model or "unknown"
         if not p2p_type:
+            logger.debug(f"[API] skipping {label}: missing p2p_type")
             continue
         if not ip:
+            logger.debug(f"[API] skipping {label}: missing ip")
             continue
         if not enr:
+            logger.debug(f"[API] skipping {label}: missing enr")
             continue
-        # above added, validate
         if not mac:
+            logger.debug(f"[API] skipping {label}: missing mac")
             continue
         if not product_model:
+            logger.debug(f"[API] skipping {label}: missing product_model")
             continue
 
-        result.append(
-            WyzeCamera(
-                p2p_id=p2p_id,
-                p2p_type=p2p_type,
-                ip=ip,
-                enr=enr,
-                mac=mac,
-                product_model=product_model,
-                nickname=nickname,
-                timezone_name=timezone_name,
-                firmware_ver=firmware_ver,
-                dtls=dtls,
-                parent_dtls=parent_dtls,
-                parent_enr=parent_enr,
-                parent_mac=parent_mac,
-                thumbnail=thumbnail,
-            )
+        cam = WyzeCamera(
+            p2p_id=p2p_id,
+            p2p_type=p2p_type,
+            ip=ip,
+            enr=enr,
+            mac=mac,
+            product_model=product_model,
+            nickname=nickname,
+            timezone_name=timezone_name,
+            firmware_ver=firmware_ver,
+            dtls=dtls,
+            parent_dtls=parent_dtls,
+            parent_enr=parent_enr,
+            parent_mac=parent_mac,
+            thumbnail=thumbnail,
         )
+        result.append(cam)
+
+        # Helpful identification (watch for GW_DUO/GW_DBD/etc.)
+        try:
+            logger.info(
+                "[API] cam added: name='%s' uri='%s' product_model='%s' mac=%s p2p_type=%s dtls=%s fw=%s",
+                cam.nickname, cam.name_uri, cam.product_model, cam.mac, cam.p2p_type, cam.dtls, cam.firmware_ver
+            )
+        except Exception:
+            # Never let logging break discovery
+            pass
+
     return result
 
 def run_action(auth_info: WyzeCredential, camera: WyzeCamera, action: str):
