@@ -1,1 +1,1 @@
-FROM idisposablegithub365/wyze-bridge:latest
+FROM terminusxx/wyze-bridge:latest
