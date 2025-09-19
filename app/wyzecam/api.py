@@ -238,10 +238,9 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
             continue
 
         device_params = device.get("device_params", {}) or {}
-
         p2p_id: Optional[str] = device_params.get("p2p_id")
         p2p_type: Optional[int] = device_params.get("p2p_type")
-        ip: Optional[str] = device_params.get("ip")
+        ip: Optional[str] = device_params.get("ip")  # MAY BE MISSING – that's OK
         enr: Optional[str] = device.get("enr")
         mac: Optional[str] = device.get("mac")
         product_model: Optional[str] = device.get("product_model")
@@ -253,17 +252,14 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         parent_enr: Optional[str] = device.get("parent_device_enr")
         parent_mac: Optional[str] = device.get("parent_device_mac")
 
-        # null-safe thumbnail lookup
+        # thumbnail is optional, guard against missing camera_thumbnails
         thumbs = device_params.get("camera_thumbnails") or {}
         thumbnail: Optional[str] = thumbs.get("thumbnails_url")
 
-        # Required fields with explicit skip logs
+        # Required fields (minimal): p2p_type, enr, mac, product_model
         label = nickname or mac or product_model or "unknown"
         if not p2p_type:
             logger.debug(f"[API] skipping {label}: missing p2p_type")
-            continue
-        if not ip:
-            logger.debug(f"[API] skipping {label}: missing ip")
             continue
         if not enr:
             logger.debug(f"[API] skipping {label}: missing enr")
@@ -274,11 +270,13 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         if not product_model:
             logger.debug(f"[API] skipping {label}: missing product_model")
             continue
+        if not ip:
+            logger.debug(f"[API] {label}: no IP in object list (will use P2P/relay if needed)")
 
         cam = WyzeCamera(
             p2p_id=p2p_id,
             p2p_type=p2p_type,
-            ip=ip,
+            ip=ip or "",  # allow empty
             enr=enr,
             mac=mac,
             product_model=product_model,
@@ -293,14 +291,13 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         )
         result.append(cam)
 
-        # Helpful identification (watch for GW_DUO/GW_DBD/etc.)
+        # Helpful identification line
         try:
             logger.info(
-                "[API] cam added: name='%s' uri='%s' product_model='%s' mac=%s p2p_type=%s dtls=%s fw=%s",
-                cam.nickname, cam.name_uri, cam.product_model, cam.mac, cam.p2p_type, cam.dtls, cam.firmware_ver
+                "[API] cam added: name='%s' uri='%s' product_model='%s' mac=%s p2p_type=%s dtls=%s fw=%s ip=%s",
+                cam.nickname, cam.name_uri, cam.product_model, cam.mac, cam.p2p_type, cam.dtls, cam.firmware_ver, cam.ip
             )
         except Exception:
-            # Never let logging break discovery
             pass
 
     return result
