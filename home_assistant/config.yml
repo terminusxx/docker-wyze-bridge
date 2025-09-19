@@ -3,7 +3,7 @@ description: WebRTC/RTSP/RTMP/LL-HLS bridge for Wyze cams in a docker container.
 slug: docker_wyze_bridge
 url: https://github.com/terminusxx/docker-wyze-bridge
 image: ghcr.io/terminusxx/docker-wyze-bridge
-version: sha-b8375f85ce355fe57bd9bfd266490baf17025c7f
+version: sha-347ae51aceb803c13bc56ab6e77ff10c7864c1ae
 stage: stable
 arch:
   - armv7
