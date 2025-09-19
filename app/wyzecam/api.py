@@ -42,7 +42,55 @@ SC_SV = {
 }
 APP_KEY = {"9319141212m2ik": "wyze_app_secret_key_132"}
 WYZE_APP_API_KEY = "WMXHYf79Nr5gIlt3r0r7p9Tcw5bvs6BB4U8O8nGJ" #someone should probably remove their API Key from the repo
+# add near the top of api.py
+from wyzebridge.logging import logger
 
+def _fetch_missing_cam_params(auth_info: WyzeCredential, mac: str) -> dict:
+    """
+    Best-effort: ask device APIs for fields missing from the homepage list,
+    e.g. p2p_id / p2p_type / ip / dtls.
+    Tries v4 first, then v2. Returns a dict of fields we can merge.
+    """
+    # v4 payload shape typically wants device_mac or device_id
+    params_v4 = {"device_mac": mac}
+    try:
+        d4 = post_device(auth_info, "get_device_info", params_v4, api_version=4)
+        # Normalize a few common field names
+        dp = d4.get("data", d4) if isinstance(d4, dict) else {}
+        device_params = dp.get("device_params") or dp
+        out = {
+            "p2p_id": device_params.get("p2p_id") or device_params.get("p2p_key"),
+            "p2p_type": device_params.get("p2p_type"),
+            "ip": device_params.get("ip"),
+            "dtls": device_params.get("dtls"),
+        }
+        # Only keep non-empty values
+        out = {k: v for k, v in out.items() if v not in (None, "", 0)}
+        if out:
+            logger.info("[API] enriched %s via v4: %s", mac, out)
+            return out
+    except Exception as e:
+        logger.debug("[API] v4 get_device_info failed for %s: %s", mac, e)
+
+    # Try v2 as a fallback
+    try:
+        d2 = post_device(auth_info, "get_device_info", {"device_mac": mac}, api_version=2)
+        dp = d2.get("data", d2) if isinstance(d2, dict) else {}
+        device_params = dp.get("device_params") or dp
+        out = {
+            "p2p_id": device_params.get("p2p_id") or device_params.get("p2p_key"),
+            "p2p_type": device_params.get("p2p_type"),
+            "ip": device_params.get("ip"),
+            "dtls": device_params.get("dtls"),
+        }
+        out = {k: v for k, v in out.items() if v not in (None, "", 0)}
+        if out:
+            logger.info("[API] enriched %s via v2: %s", mac, out)
+            return out
+    except Exception as e:
+        logger.debug("[API] v2 get_device_info failed for %s: %s", mac, e)
+
+    return {}
 class AccessTokenError(Exception):
     pass
 
