@@ -225,30 +225,22 @@ def get_homepage_object_list(auth_info: WyzeCredential) -> dict[str, Any]:
     return validate_resp(resp)
 
 def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
-    """Return a list of all cameras on the account."""
-    logger.warning("[API] 🔧 Patched get_camera_list is running (GW_DUO patch v1)")
+    logger.warning("[API] 🔧 Patched get_camera_list is running (GW_DUO patch v2)")
     data = get_homepage_object_list(auth_info)
     result: list[WyzeCamera] = []
 
-    device_list = data.get("device_list", [])
-    logger.info("[API] device_list count: %s", len(device_list) if isinstance(device_list, list) else "n/a")
-
-    if not isinstance(device_list, list):
-        logger.warning("[API] Unexpected device_list type: %s", type(device_list).__name__)
-        return result
-
-    # brief per-device summary (helps verify fields coming from cloud)
+    device_list = data.get("device_list", []) or []
+    logger.info("[API] device_list count: %s", len(device_list))
     for d in device_list:
         try:
-            dp = d.get("device_params") or {}
             logger.info(
                 "[API] device: type=%s model=%s nick=%s mac=%s has_p2p=%s ip=%s",
                 d.get("product_type"),
                 d.get("product_model"),
                 d.get("nickname"),
                 d.get("mac"),
-                bool(dp.get("p2p_type")),
-                dp.get("ip"),
+                bool((d.get("device_params") or {}).get("p2p_type")),
+                (d.get("device_params") or {}).get("ip"),
             )
         except Exception:
             pass
@@ -258,10 +250,9 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
             continue
 
         device_params = device.get("device_params", {}) or {}
-
         p2p_id: Optional[str] = device_params.get("p2p_id")
         p2p_type: Optional[int] = device_params.get("p2p_type")
-        ip: Optional[str] = device_params.get("ip")  # may be missing; allow empty
+        ip: Optional[str] = device_params.get("ip")
         enr: Optional[str] = device.get("enr")
         mac: Optional[str] = device.get("mac")
         product_model: Optional[str] = device.get("product_model")
@@ -273,24 +264,33 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
         parent_enr: Optional[str] = device.get("parent_device_enr")
         parent_mac: Optional[str] = device.get("parent_device_mac")
 
+        # thumbnail may be missing
         thumbs = device_params.get("camera_thumbnails") or {}
         thumbnail: Optional[str] = thumbs.get("thumbnails_url")
 
+        # Try enrichment for Duo/Doorbell variants if fields are missing
+        if (not p2p_type or not ip) and product_model in {"GW_DUO", "GW_DBD", "GW_DBD2"}:
+            extra = _fetch_missing_cam_params(auth_info, mac or "")
+            p2p_id = p2p_id or extra.get("p2p_id")
+            p2p_type = p2p_type or extra.get("p2p_type")
+            ip = ip or extra.get("ip")
+            dtls = dtls if dtls is not None else extra.get("dtls")
+
         label = nickname or mac or product_model or "unknown"
         if not p2p_type:
-            logger.debug("[API] skipping %s: missing p2p_type", label)
+            logger.debug(f"[API] skipping {label}: missing p2p_type")
             continue
         if not enr:
-            logger.debug("[API] skipping %s: missing enr", label)
+            logger.debug(f"[API] skipping {label}: missing enr")
             continue
         if not mac:
-            logger.debug("[API] skipping %s: missing mac", label)
+            logger.debug(f"[API] skipping {label}: missing mac")
             continue
         if not product_model:
-            logger.debug("[API] skipping %s: missing product_model", label)
+            logger.debug(f"[API] skipping {label}: missing product_model")
             continue
         if not ip:
-            logger.debug("[API] %s: no IP in object list (will use P2P/relay if needed)", label)
+            logger.debug(f"[API] {label}: no IP in object list (will rely on P2P/relay)")
 
         cam = WyzeCamera(
             p2p_id=p2p_id,
@@ -309,15 +309,16 @@ def get_camera_list(auth_info: WyzeCredential) -> list[WyzeCamera]:
             thumbnail=thumbnail,
         )
         result.append(cam)
-
         try:
             logger.info(
                 "[API] cam added: name='%s' uri='%s' model='%s' mac=%s p2p_type=%s dtls=%s fw=%s ip=%s",
-                cam.nickname, cam.name_uri, cam.product_model, cam.mac, cam.p2p_type, cam.dtls, cam.firmware_ver, cam.ip
+                cam.nickname, cam.name_uri, cam.product_model, cam.mac,
+                cam.p2p_type, cam.dtls, cam.firmware_ver, cam.ip
             )
         except Exception:
             pass
 
+    logger.info("[API] Fetched [%d] cameras", len(result))
     return result
 def run_action(auth_info: WyzeCredential, camera: WyzeCamera, action: str):
     """Send run_action commands to the camera."""
