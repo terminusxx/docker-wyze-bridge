@@ -5,29 +5,17 @@ on:
     - cron: '31 22 * * 0'
   push:
     branches: [main, dev]
-    # Publish semver tags as releases.
-    tags: ['v*.*.*']
+    tags: ['v*.*.*']   # publish semver tags as releases
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 jobs:
-  prebuild:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Should build?
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "The DOCKERHUB_USERNAME secret is missing."
-            exit 1
-          fi
-
   build:
-    needs: [prebuild]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
+      packages: write   # needed to push to ghcr.io
 
     strategy:
       matrix:
@@ -49,13 +37,6 @@ jobs:
           echo "platforms=${{ matrix.dockerfile == 'multiarch' && 'linux/amd64,linux/arm64,linux/arm/v7' || 'linux/amd64' }}" >> $GITHUB_OUTPUT
           echo "arch=${{ matrix.dockerfile == 'multiarch' && 'amd64,aarch64,armhf' || 'amd64' }}" >> $GITHUB_OUTPUT
 
-      - name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Log into registry ghcr.io
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -63,7 +44,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-  
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -80,7 +61,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/wyze-bridge
             ghcr.io/${{ github.repository }}
           flavor: |
             latest=auto
@@ -118,7 +98,7 @@ jobs:
             BUILD=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
             GITHUB_SHA=${{ github.sha }}
-            QSV=${{ matrix.qsv }} 
+            QSV=${{ matrix.qsv }}
           labels: |
             ${{ steps.meta.outputs.labels }}
             io.hass.name=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.title'] }}
